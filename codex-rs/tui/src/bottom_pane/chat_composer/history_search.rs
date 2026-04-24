@@ -41,7 +41,7 @@ use super::ComposerDraft;
 use super::InputResult;
 use crate::app_event::AppEvent;
 use crate::key_hint;
-use crate::key_hint::has_ctrl_or_alt;
+use crate::key_hint::has_shortcut_modifier;
 use crate::ui_consts::FOOTER_INDENT_COLS;
 
 /// Active composer-owned state for one Ctrl+R search interaction.
@@ -246,7 +246,7 @@ impl ChatComposer {
                 code: KeyCode::Char(ch),
                 modifiers,
                 ..
-            } if !has_ctrl_or_alt(modifiers) => {
+            } if !has_shortcut_modifier(modifiers) => {
                 if let Some(search) = self.history_search.as_ref() {
                     let mut query = search.query.clone();
                     query.push(ch);

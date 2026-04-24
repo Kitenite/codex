@@ -95,8 +95,19 @@ fn key_hint_style() -> Style {
     Style::default().dim()
 }
 
-pub(crate) fn has_ctrl_or_alt(mods: KeyModifiers) -> bool {
-    (mods.contains(KeyModifiers::CONTROL) || mods.contains(KeyModifiers::ALT)) && !is_altgr(mods)
+/// Does this key event carry a modifier that suppresses normal text input?
+///
+/// Ctrl and Alt are the classic shortcut modifiers (Alt+Ctrl together is AltGr
+/// on European layouts, which is text-producing, so we exclude it). SUPER is
+/// Cmd on macOS and Win/Super on Linux — when host terminals speak the kitty
+/// keyboard protocol, Cmd chords arrive here as e.g. `Char('v')` + `SUPER`
+/// (`\e[118;9u`). Without this check those would be treated as plain character
+/// input and the literal `v` would leak into the textarea.
+pub(crate) fn has_shortcut_modifier(mods: KeyModifiers) -> bool {
+    let ctrl_or_alt =
+        (mods.contains(KeyModifiers::CONTROL) || mods.contains(KeyModifiers::ALT))
+            && !is_altgr(mods);
+    ctrl_or_alt || mods.contains(KeyModifiers::SUPER)
 }
 
 #[cfg(windows)]
@@ -109,4 +120,40 @@ pub(crate) fn is_altgr(mods: KeyModifiers) -> bool {
 #[inline]
 pub(crate) fn is_altgr(_mods: KeyModifiers) -> bool {
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plain_char_is_not_a_shortcut() {
+        assert!(!has_shortcut_modifier(KeyModifiers::NONE));
+        assert!(!has_shortcut_modifier(KeyModifiers::SHIFT));
+    }
+
+    #[test]
+    fn ctrl_and_alt_are_shortcuts() {
+        assert!(has_shortcut_modifier(KeyModifiers::CONTROL));
+        assert!(has_shortcut_modifier(KeyModifiers::ALT));
+    }
+
+    #[test]
+    fn super_is_a_shortcut() {
+        // macOS Cmd / Linux Win arrive as SUPER when the host terminal speaks
+        // the kitty keyboard protocol; without this, `Cmd+V` would leak `v`
+        // into the textarea.
+        assert!(has_shortcut_modifier(KeyModifiers::SUPER));
+        assert!(has_shortcut_modifier(
+            KeyModifiers::SUPER | KeyModifiers::SHIFT,
+        ));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn altgr_is_not_a_shortcut() {
+        assert!(!has_shortcut_modifier(
+            KeyModifiers::CONTROL | KeyModifiers::ALT,
+        ));
+    }
 }
