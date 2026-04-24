@@ -124,7 +124,7 @@
 use crate::bottom_pane::footer::mode_indicator_line;
 use crate::key_hint;
 use crate::key_hint::KeyBinding;
-use crate::key_hint::has_ctrl_or_alt;
+use crate::key_hint::has_shortcut_modifier;
 use crate::line_truncation::truncate_line_with_ellipsis_if_overflow;
 use crate::ui_consts::FOOTER_INDENT_COLS;
 use crossterm::event::KeyCode;
@@ -2992,8 +2992,8 @@ impl ChatComposer {
             ..
         } = input
         {
-            let has_ctrl_or_alt = has_ctrl_or_alt(modifiers);
-            if !has_ctrl_or_alt && !self.disable_paste_burst {
+            let is_shortcut = has_shortcut_modifier(modifiers);
+            if !is_shortcut && !self.disable_paste_burst {
                 // Non-ASCII characters (e.g., from IMEs) can arrive in quick bursts, so avoid
                 // holding the first char while still allowing burst detection for paste input.
                 if !ch.is_ascii() {
@@ -3083,8 +3083,7 @@ impl ChatComposer {
         } = input;
         match code {
             KeyCode::Char(_) => {
-                let has_ctrl_or_alt = has_ctrl_or_alt(modifiers);
-                if has_ctrl_or_alt {
+                if has_shortcut_modifier(modifiers) {
                     self.paste_burst.clear_window_after_non_char();
                 }
             }
@@ -3152,7 +3151,7 @@ impl ChatComposer {
         }
 
         let toggles = matches!(key_event.code, KeyCode::Char('?'))
-            && !has_ctrl_or_alt(key_event.modifiers)
+            && !has_shortcut_modifier(key_event.modifiers)
             && self.is_empty()
             && !self.is_in_paste_burst();
 
